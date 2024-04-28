@@ -5,9 +5,11 @@
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
 
 const char* ssid = "OSK_5261";
 const char* password = "KLJ1RXA6S0";
+const char* serverAddress = "192.168.100.121";
 
 int clockPin = D1;
 int dataPin = D2;
@@ -23,6 +25,8 @@ int blueLedValue = 0;
 int greenLedValue = 0;
 int yellowLedValue = 0;
 int whiteLedValue = 0;
+
+int lockOpen = false;
 
 ESP8266WebServer server(80);
 
@@ -45,6 +49,7 @@ void setup() {
 
 void loop() {
   recconectToWifiIfNeeded();
+  handleLock();
   server.handleClient();
 }
 
@@ -171,4 +176,62 @@ void recconectToWifiIfNeeded() {
   if (WiFi.status() != WL_CONNECTED) {
     connectToWiFi();
   }
+}
+
+void handleLock() {
+  if (checkLockConditions()) {
+    if (!lockOpen) {
+      Serial.println("unlocking");
+      sendMessageForLock(true);
+      lockOpen = true;
+    }
+  } else {
+    if (lockOpen) {
+      Serial.println("locking");
+      sendMessageForLock(false);
+      lockOpen = false;
+    }
+  }
+}
+
+bool checkLockConditions() {
+  return (redLedValue == 7
+          && blueLedValue == 6
+          && greenLedValue == 5
+          && yellowLedValue == 2
+          && whiteLedValue == 3);
+}
+
+void sendMessageForLock(bool toUnlock) {
+  HTTPClient http;
+  WiFiClient client;
+  String url;
+
+  if (toUnlock) {
+    url = "http://" + String(serverAddress) + "/unlock";
+  } else {
+    url = "http://" + String(serverAddress) + "/lock";
+  }
+
+  // Begin HTTP request with WiFi client
+  http.begin(client, url);
+
+  // Add headers
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  int httpResponseCode = http.POST("");
+  Serial.println("POST: " + url);
+
+  // Check response
+  if (httpResponseCode > 0) {
+    Serial.print("Message sent successfully. Server response code: ");
+    Serial.println(httpResponseCode);
+    String response = http.getString();
+    Serial.println("Server response: " + response);
+  } else {
+    Serial.print("Error sending message. Error code: ");
+    Serial.println(httpResponseCode);
+  }
+
+  // End HTTP request
+  http.end();
 }
