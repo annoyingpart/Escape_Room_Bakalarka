@@ -18,7 +18,8 @@ public class NavigationApp extends Application {
 
     private TextArea logTextArea;
     private VBox rightBox;
-    private static final String ESP_IP_ADDRESS = "192.168.100.251";
+    private static final String A4_IP_ADDRESS = "192.168.100.251";
+    private static final String A3_IP_ADDRESS = "192.168.100.121";
 
     @Override
     public void start(Stage primaryStage) {
@@ -75,10 +76,16 @@ public class NavigationApp extends Application {
         closeButton.setOnAction(e -> closeContent());
         if (contentName.equals("Content 1")) {
             Button unlockTheGameButton = new Button("Unlock the game");
-            unlockTheGameButton.setOnAction(e -> sendHttpRequest("/unlock_game"));
+            unlockTheGameButton.setOnAction(e -> sendHttpRequest("/unlock_game", A4_IP_ADDRESS));
             Button initLCD = new Button("initLCD");
-            initLCD.setOnAction(e -> sendHttpRequest("/setup_lcd"));
+            initLCD.setOnAction(e -> sendHttpRequest("/setup_lcd", A4_IP_ADDRESS));
             newContent.getChildren().addAll(initLCD, closeButton, unlockTheGameButton);
+        } else if (contentName.equals("Content 3")) {
+            Button lockDoor = new Button("Lock door");
+            lockDoor.setOnAction(e -> sendHttpRequest("/lock", A3_IP_ADDRESS));
+            Button unlockDoor = new Button("Unlock door");
+            unlockDoor.setOnAction(e -> sendHttpRequest("/unlock", A3_IP_ADDRESS));
+            newContent.getChildren().addAll(unlockDoor, closeButton, lockDoor);
         } else {
             newContent.getChildren().addAll(new Button(contentName), closeButton);
         }
@@ -97,9 +104,9 @@ public class NavigationApp extends Application {
         log("Closed content");
     }
 
-    private void sendHttpRequest(String endpoint) {
+    private void sendHttpRequest(String endpoint, String address) {
         try {
-            URL url = new URL("http://" + ESP_IP_ADDRESS + endpoint);
+            URL url = new URL("http://" + address + endpoint);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
 
