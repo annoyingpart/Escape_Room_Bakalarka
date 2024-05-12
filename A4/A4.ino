@@ -108,6 +108,7 @@ void handlePuzzle() {
 
 void setUpLCD() {
   resetVariables();
+  gameUnlocked = false;
   lcd.init();
   lcd.backlight();
   lcd.clear();
@@ -134,12 +135,14 @@ void handleTouchedLCD() {
 }
 
 void unlockTheGame() {
-  gameUnlocked = true;
-  lcd.clear();
-  lcd.print("TAP TO START");
-  lcd.setCursor(14, 0);
-  lcd.print(String(countdown));
-  resetVariables();
+  if (gameUnlocked == false) {
+    gameUnlocked = true;
+    lcd.clear();
+    lcd.print("TAP TO START");
+    lcd.setCursor(14, 0);
+    lcd.print(String(countdown));
+    resetVariables();
+  }
 }
 
 void resetVariables() {
