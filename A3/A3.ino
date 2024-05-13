@@ -5,6 +5,7 @@
 const char* ssid = "OSK_5261";
 const char* password = "KLJ1RXA6S0";
 const char* serverAddressA4module = "192.168.100.251";
+const char* serverAddressA5module = "192.168.100.152";
 
 int controlPin = D1;
 
@@ -44,6 +45,7 @@ void setUpRoutes() {
     server.send(200, "text/plain", "Message received");
 
     unlockA4module();
+    unlockA5module();
   });
 
   server.on("/lock", HTTP_POST, []() {
@@ -79,6 +81,35 @@ void unlockA4module() {
   // End HTTP request
   http.end();
 }
+
+void unlockA5module() {
+  HTTPClient http;
+  WiFiClient client;
+  String url = "http://" + String(serverAddressA5module) + "/activate_module";
+
+  // Begin HTTP request with WiFi client
+  http.begin(client, url);
+
+  // Add headers
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  int httpResponseCode = http.POST("");
+  Serial.println("POST: " + url);
+
+  // Check response
+  if (httpResponseCode > 0) {
+    Serial.print("Message sent successfully. Server response code: ");
+    Serial.println(httpResponseCode);
+    String response = http.getString();
+    Serial.println("Server response: " + response);
+  } else {
+    Serial.print("Error sending message. Error code: ");
+    Serial.println(httpResponseCode);
+  }
+
+  // End HTTP request
+  http.end();
+}
+
 
 void startServer() {
   server.begin();
