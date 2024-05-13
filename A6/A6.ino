@@ -7,6 +7,8 @@ const char* password = "KLJ1RXA6S0";
 bool moduleA4completed = false;
 bool moduleA5completed = false;
 
+bool gameFinished = false;
+
 int openLockControlPin = D1;
 
 ESP8266WebServer server(80);
@@ -24,8 +26,9 @@ void setup() {
 void loop() {
   recconectToWifiIfNeeded();
   server.handleClient();
-  if (checkWinningConditions()) {
+  if (checkWinningConditions()&& gameFinished == false) {
     openLock();
+    gameFinished = true;
   }
 }
 
