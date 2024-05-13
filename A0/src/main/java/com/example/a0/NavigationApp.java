@@ -20,6 +20,7 @@ public class NavigationApp extends Application {
     private VBox rightBox;
     private static final String A4_IP_ADDRESS = "192.168.100.251";
     private static final String A3_IP_ADDRESS = "192.168.100.121";
+    private static final String A5_IP_ADDRESS = "192.168.100.152";
     private static final String A6_IP_ADDRESS = "192.168.100.22";
 
     @Override
@@ -87,6 +88,10 @@ public class NavigationApp extends Application {
             Button unlockDoor = new Button("Unlock door");
             unlockDoor.setOnAction(e -> sendHttpRequest("/unlock", A3_IP_ADDRESS));
             newContent.getChildren().addAll(unlockDoor, closeButton, lockDoor);
+        } else if (contentName.equals("Content 5")){
+            Button activateModule = new Button("activateModule");
+            activateModule.setOnAction(e -> sendHttpRequest("/activate_module", A5_IP_ADDRESS));
+            newContent.getChildren().addAll(activateModule);
         } else if (contentName.equals("Content 6")){
             Button openLock = new Button("Open lock");
             openLock.setOnAction(e -> sendHttpRequest("/open_lock", A6_IP_ADDRESS));
