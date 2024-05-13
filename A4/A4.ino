@@ -7,6 +7,7 @@
 
 const char* ssid = "OSK_5261";
 const char* password = "KLJ1RXA6S0";
+const char* serverAddressA6Module = "192.168.100.22";
 
 int muxA = D5;
 int muxB = D6;
@@ -26,6 +27,8 @@ byte actualGuessRow2 = 0x00;
 
 bool gameStarted = false;
 bool gameUnlocked = false;
+bool toA6Sended = false;
+bool puzzleFinished = false;
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
@@ -70,7 +73,7 @@ void loop() {
       Serial.println("Game Started");
     }
 
-    if (gameStarted) {
+    if (gameStarted && puzzleFinished == false) {
       handleTouchedLCD();
     }
   }
@@ -101,14 +104,21 @@ void handleTouch(byte col) {
 void handlePuzzle() {
   if (puzzle1Row1 == actualGuessRow1
       && puzzle2Row2 == actualGuessRow2) {
-    lcd.clear();
-    lcd.print("!!!!!WINNER!!!!!");
+    if (puzzleFinished == false) {
+      lcd.clear();
+      lcd.print("!!!!!WINNER!!!!!");
+      puzzleFinished = true;
+    }
+    if (toA6Sended == false) {
+      sendMessagePuzzleCompleted();
+    }
   }
 }
 
 void setUpLCD() {
   resetVariables();
   gameUnlocked = false;
+  toA6Sended = false;
   lcd.init();
   lcd.backlight();
   lcd.clear();
@@ -152,6 +162,7 @@ void resetVariables() {
   actualGuessRow2 = 0x00;
 
   gameStarted = false;
+  puzzleFinished = false;
 }
 
 
@@ -175,6 +186,35 @@ void recconectToWifiIfNeeded() {
   if (WiFi.status() != WL_CONNECTED) {
     connectToWiFi();
   }
+}
+
+void sendMessagePuzzleCompleted() {
+  HTTPClient http;
+  WiFiClient client;
+  String url = "http://" + String(serverAddressA6Module) + "/finished_A4";
+
+  // Begin HTTP request with WiFi client
+  http.begin(client, url);
+
+  // Add headers
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  int httpResponseCode = http.POST("");
+  Serial.println("POST: " + url);
+
+  // Check response
+  if (httpResponseCode > 0) {
+    Serial.print("Message sent successfully. Server response code: ");
+    Serial.println(httpResponseCode);
+    String response = http.getString();
+    Serial.println("Server response: " + response);
+    toA6Sended = true;
+  } else {
+    Serial.print("Error sending message. Error code: ");
+    Serial.println(httpResponseCode);
+  }
+
+  // End HTTP request
+  http.end();
 }
 
 void setUpRoutes() {
