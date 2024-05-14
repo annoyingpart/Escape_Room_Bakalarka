@@ -12,7 +12,14 @@ import javafx.stage.Stage;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public class NavigationApp extends Application {
 
@@ -23,11 +30,16 @@ public class NavigationApp extends Application {
     private static final String A5_IP_ADDRESS = "192.168.100.152";
     private static final String A6_IP_ADDRESS = "192.168.100.22";
 
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_2)
+            .build();
+
     @Override
     public void start(Stage primaryStage) {
         // Initialize logTextArea
         logTextArea = new TextArea();
         logTextArea.setEditable(false);
+        logTextArea.maxHeight(500);
 
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(10));
@@ -43,7 +55,7 @@ public class NavigationApp extends Application {
         // TextArea for logs
         root.setBottom(logTextArea);
 
-        Scene scene = new Scene(root, 600, 400);
+        Scene scene = new Scene(root, 800, 600);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Navigation App");
         primaryStage.show();
@@ -51,10 +63,10 @@ public class NavigationApp extends Application {
 
     private VBox createLeftBox() {
         VBox leftBox = new VBox(10);
-        for (int i = 1; i <= 7; i++) {
-            Button button = new Button("Button " + i);
+        for (int i = 1; i <= 6; i++) {
+            Button button = new Button("Module A" + i);
             int finalI = i;
-            button.setOnAction(e -> addNewContent("Content " + finalI));
+            button.setOnAction(e -> addNewContent("Module A" + finalI));
             leftBox.getChildren().add(button);
         }
         return leftBox;
@@ -62,9 +74,6 @@ public class NavigationApp extends Application {
 
     private void addNewContent(String contentName) {
         VBox newContent = createNewContent(contentName);
-
-        // Add log to TextArea
-        log("Added new content: " + contentName);
 
         // Add new buttons to the right area
         rightBox.getChildren().clear(); // Clear existing buttons
@@ -76,28 +85,32 @@ public class NavigationApp extends Application {
         newContent.setPadding(new Insets(10));
         Button closeButton = new Button("Close");
         closeButton.setOnAction(e -> closeContent());
-        if (contentName.equals("Content 1")) {
-            Button unlockTheGameButton = new Button("Unlock the game");
-            unlockTheGameButton.setOnAction(e -> sendHttpRequest("/unlock_game", A4_IP_ADDRESS));
-            Button initLCD = new Button("initLCD");
-            initLCD.setOnAction(e -> sendHttpRequest("/setup_lcd", A4_IP_ADDRESS));
-            newContent.getChildren().addAll(initLCD, closeButton, unlockTheGameButton);
-        } else if (contentName.equals("Content 3")) {
-            Button lockDoor = new Button("Lock door");
-            lockDoor.setOnAction(e -> sendHttpRequest("/lock", A3_IP_ADDRESS));
-            Button unlockDoor = new Button("Unlock door");
-            unlockDoor.setOnAction(e -> sendHttpRequest("/unlock", A3_IP_ADDRESS));
-            newContent.getChildren().addAll(unlockDoor, closeButton, lockDoor);
-        } else if (contentName.equals("Content 5")){
-            Button activateModule = new Button("activateModule");
-            activateModule.setOnAction(e -> sendHttpRequest("/activate_module", A5_IP_ADDRESS));
-            newContent.getChildren().addAll(activateModule);
-        } else if (contentName.equals("Content 6")){
-            Button openLock = new Button("Open lock");
-            openLock.setOnAction(e -> sendHttpRequest("/open_lock", A6_IP_ADDRESS));
-            newContent.getChildren().addAll(openLock);
-        } else {
-            newContent.getChildren().addAll(new Button(contentName), closeButton);
+        switch (contentName) {
+            case "Module A3" -> {
+                Button lockDoor = new Button("Lock door");
+                lockDoor.setOnAction(e -> sendHttpRequest("/lock", A3_IP_ADDRESS));
+                Button unlockDoor = new Button("Unlock door");
+                unlockDoor.setOnAction(e -> sendHttpRequest("/unlock", A3_IP_ADDRESS));
+                newContent.getChildren().addAll(unlockDoor, closeButton, lockDoor);
+            }
+            case "Module A4" -> {
+                Button unlockTheGameButton = new Button("Unlock the game");
+                unlockTheGameButton.setOnAction(e -> sendHttpRequest("/unlock_game", A4_IP_ADDRESS));
+                Button initLCD = new Button("initLCD");
+                initLCD.setOnAction(e -> sendHttpRequest("/setup_lcd", A4_IP_ADDRESS));
+                newContent.getChildren().addAll(initLCD, closeButton, unlockTheGameButton);
+            }
+            case "Module A5" -> {
+                Button activateModule = new Button("activateModule");
+                activateModule.setOnAction(e -> sendHttpRequest("/activate_module", A5_IP_ADDRESS));
+                newContent.getChildren().addAll(activateModule);
+            }
+            case "Module A6" -> {
+                Button openLock = new Button("Open lock");
+                openLock.setOnAction(e -> sendHttpRequest("/open_lock", A6_IP_ADDRESS));
+                newContent.getChildren().addAll(openLock);
+            }
+            default -> newContent.getChildren().addAll(new Button(contentName), closeButton);
         }
         return newContent;
     }
@@ -117,24 +130,45 @@ public class NavigationApp extends Application {
     private void sendHttpRequest(String endpoint, String address) {
         try {
             URL url = new URL("http://" + address + endpoint);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
+            log(LocalDateTime.now() + " POST: " + "http://" + address + endpoint);
 
-            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String inputLine;
-            StringBuilder response = new StringBuilder();
+//            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+//            conn.setRequestMethod("POST");
+//
+//            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+//            String inputLine;
+//            StringBuilder response = new StringBuilder();
+//
+//            while ((inputLine = in.readLine()) != null) {
+//                response.append(inputLine);
+//            }
+//            in.close();
 
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
-            }
-            in.close();
+            sendHttpRequestAsync(url.toString()).orTimeout(10, TimeUnit.SECONDS)
+                    .thenAccept(response -> {
+                        log(LocalDateTime.now() + " " + String.valueOf(response.statusCode()) + " " + response.body());
+                    })
+                    .exceptionally(e -> {
+                        log("Error: " + e.getMessage());
+                        return null;
+                    });
 
-            System.out.println("Response: " + response.toString());
+//            log(LocalDateTime.now() + " Response: " + response);
+//            System.out.println("Response: " + response.toString());
 
-            conn.disconnect();
+//            conn.disconnect();
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public CompletableFuture<HttpResponse<String>> sendHttpRequestAsync(String url) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .POST(HttpRequest.BodyPublishers.ofString(""))
+                .uri(URI.create(url))
+                .build();
+
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
     }
 
     public static void main(String[] args) {
